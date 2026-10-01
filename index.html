@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Password Manager</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+
+  <div class="max-w-4xl mx-auto">
+    <!-- Header Card -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-800">🔐 Password Manager</h1>
+          <p class="text-gray-600 mt-1">Securely manage all your passwords</p>
+        </div>
+        <div class="flex gap-2">
+          <!-- Export Button -->
+          <button
+            id="exportBtn"
+            onclick="exportData()"
+            class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition shadow-sm"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Export
+          </button>
+          <!-- Import Button Label -->
+          <label class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+            </svg>
+            Import
+            <input
+              type="file"
+              accept=".json"
+              id="importInput"
+              onchange="importData(event)"
+              class="hidden"
+            />
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Banner -->
+    <div
+      id="notification"
+      class="hidden bg-green-500 text-white px-6 py-3 rounded-lg mb-4 shadow-lg transition-all duration-300"
+    ></div>
+
+    <!-- Add New Password Trigger -->
+    <button
+      onclick="openModal()"
+      class="w-full bg-indigo-600 text-white py-4 rounded-lg font-semibold hover:bg-indigo-700 transition mb-6 flex items-center justify-center gap-2 shadow-lg"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Add New Password
+    </button>
+
+    <!-- Password List Container -->
+    <div id="passwordList" class="space-y-4"></div>
+
+    <!-- Modal Backdrop -->
+    <div
+      id="passwordModal"
+      class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50"
+    >
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+        <h2 id="modalTitle" class="text-2xl font-bold mb-4">Add New Password</h2>
+        <form onsubmit="handleFormSubmit(event)" class="space-y-4">
+          <div>
+            <label class="block text-gray-700 font-semibold mb-2" for="entryName">
+              Name (website/service)
+            </label>
+            <input
+              type="text"
+              id="entryName"
+              required
+              class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="e.g., Gmail, Facebook"
+            />
+          </div>
+
+          <div>
+            <label class="block text-gray-700 font-semibold mb-2" for="entryPassword">
+              Password
+            </label>
+            <div class="flex gap-2">
+              <input
+                type="text"
+                id="entryPassword"
+                required
+                class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+              />
+              <button
+                type="button"
+                onclick="generateNewPassword()"
+                class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition flex items-center justify-center"
+                title="Generate password"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="block text-gray-700 font-semibold" for="entryLength">
+                Password Length: <span id="lengthDisplay">16</span>
+              </label>
+            </div>
+            <input
+              type="range"
+              id="entryLength"
+              min="8"
+              max="32"
+              value="16"
+              oninput="updateLengthDisplay(this.value)"
+              class="w-full"
+            />
+            <div class="flex justify-between text-sm text-gray-500">
+              <span>8</span>
+              <span>32</span>
+            </div>
+          </div>
+
+          <div class="flex gap-2 pt-4">
+            <button
+              type="button"
+              onclick="closeModal()"
+              class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              id="modalSubmitBtn"
+              class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            >
+              Add
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // App State Variables
+    let passwords = [];
+    let editingIndex = null;
+    let visiblePasswords = {};
+    let notificationTimeout = null;
+
+    // SVG Icons Definitions
+    const icons = {
+      eye: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>`,
+      eyeOff: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.048 10.048 0 013.682-.863c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m-4.692-4.692a3 3 0 00-4.243-4.243M3 3l18 18"/></svg>`,
+      copy: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>`,
+      edit: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>`,
+      trash: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`
+    };
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('passwords');
+      if (saved) {
+        try {
+          passwords = JSON.parse(saved);
+        } catch (err) {
+          passwords = [];
+        }
+      }
+      renderPasswords();
+    });
+
+    function saveToStorage(data) {
+      localStorage.setItem('passwords', JSON.stringify(data));
+      passwords = data;
+      renderPasswords();
+    }
+
+    function generatePassword(length) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+      let password = '';
+      for (let i = 0; i < length; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return password;
+    }
+
+    function showNotification(message) {
+      const notifEl = document.getElementById('notification');
+      notifEl.textContent = message;
+      notifEl.classList.remove('hidden');
+
+      if (notificationTimeout) clearTimeout(notificationTimeout);
+      notificationTimeout = setTimeout(() => {
+        notifEl.classList.add('hidden');
+      }, 3000);
+    }
+
+    function renderPasswords() {
+      const container = document.getElementById('passwordList');
+
+      if (passwords.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+            No passwords saved yet. Click "Add New Password" to get started!
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = passwords.map((entry, index) => {
+        const isVisible = !!visiblePasswords[index];
+        return `
+          <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+            <div class="flex items-start justify-between flex-wrap gap-4">
+              <div class="flex-1 min-w-0">
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">${escapeHtml(entry.name)}</h3>
+                <div class="flex items-center gap-2 mb-2">
+                  <input
+                    type="${isVisible ? 'text' : 'password'}"
+                    value="${escapeHtml(entry.password)}"
+                    readonly
+                    class="flex-1 bg-gray-50 border border-gray-300 rounded px-3 py-2 font-mono text-gray-800"
+                  />
+                  <button
+                    onclick="togglePasswordVisibility(${index})"
+                    class="p-2 hover:bg-gray-100 rounded transition text-gray-600"
+                    title="${isVisible ? 'Hide' : 'Show'} password"
+                  >
+                    ${isVisible ? icons.eyeOff : icons.eye}
+                  </button>
+                  <button
+                    onclick="copyToClipboard('${escapeJsString(entry.password)}', '${escapeJsString(entry.name)}')"
+                    class="p-2 hover:bg-gray-100 rounded transition text-gray-600"
+                    title="Copy to clipboard"
+                  >
+                    ${icons.copy}
+                  </button>
+                </div>
+                <p class="text-sm text-gray-500">Last updated: ${escapeHtml(entry.lastUpdated)}</p>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  onclick="handleEdit(${index})"
+                  class="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                  title="Edit entry"
+                >
+                  ${icons.edit}
+                </button>
+                <button
+                  onclick="handleDelete(${index})"
+                  class="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                  title="Delete entry"
+                >
+                  ${icons.trash}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openModal(index = null) {
+      editingIndex = index;
+      const modal = document.getElementById('passwordModal');
+      const title = document.getElementById('modalTitle');
+      const submitBtn = document.getElementById('modalSubmitBtn');
+      const nameInput = document.getElementById('entryName');
+      const passInput = document.getElementById('entryPassword');
+      const lengthInput = document.getElementById('entryLength');
+
+      if (index !== null) {
+        title.textContent = 'Edit Password';
+        submitBtn.textContent = 'Update';
+        nameInput.value = passwords[index].name;
+        passInput.value = passwords[index].password;
+        lengthInput.value = 16;
+      } else {
+        title.textContent = 'Add New Password';
+        submitBtn.textContent = 'Add';
+        nameInput.value = '';
+        passInput.value = '';
+        lengthInput.value = 16;
+      }
+
+      updateLengthDisplay(lengthInput.value);
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('passwordModal').classList.add('hidden');
+      editingIndex = null;
+    }
+
+    function updateLengthDisplay(val) {
+      document.getElementById('lengthDisplay').textContent = val;
+    }
+
+    function generateNewPassword() {
+      const length = parseInt(document.getElementById('entryLength').value, 10);
+      document.getElementById('entryPassword').value = generatePassword(length);
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('entryName').value.trim();
+      const password = document.getElementById('entryPassword').value;
+
+      if (!name || !password) {
+        showNotification('Please fill in all fields');
+        return;
+      }
+
+      const entry = {
+        name,
+        password,
+        lastUpdated: new Date().toLocaleString()
+      };
+
+      let newPasswords = [...passwords];
+      if (editingIndex !== null) {
+        newPasswords[editingIndex] = entry;
+        showNotification('Password updated successfully!');
+      } else {
+        newPasswords.push(entry);
+        showNotification('Password added successfully!');
+      }
+
+      saveToStorage(newPasswords);
+      closeModal();
+    }
+
+    function handleEdit(index) {
+      openModal(index);
+    }
+
+    function handleDelete(index) {
+      if (confirm('Are you sure you want to delete this password?')) {
+        const newPasswords = passwords.filter((_, i) => i !== index);
+        saveToStorage(newPasswords);
+        showNotification('Password deleted successfully!');
+      }
+    }
+
+    function togglePasswordVisibility(index) {
+      visiblePasswords[index] = !visiblePasswords[index];
+      renderPasswords();
+    }
+
+    function copyToClipboard(text, name) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showNotification(`Password for ${name} copied to clipboard!`);
+      } catch (err) {
+        showNotification('Failed to copy password.');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    function exportData() {
+      const dataStr = JSON.stringify(passwords, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'passwords.json';
+      link.click();
+      URL.revokeObjectURL(url);
+      showNotification('Passwords exported successfully!');
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const imported = JSON.parse(event.target.result);
+            if (Array.isArray(imported)) {
+              saveToStorage(imported);
+              showNotification('Passwords imported successfully!');
+            } else {
+              throw new Error('Invalid format');
+            }
+          } catch (error) {
+            showNotification('Error importing file. Please check the format.');
+          }
+          // Reset file input value so the same file can be imported again if needed
+          e.target.value = '';
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    // Helper utilities for safe rendering
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, (m) => {
+        return {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        }[m];
+      });
+    }
+
+    function escapeJsString(str) {
+      return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+  </script>
+</body>
+</html>
